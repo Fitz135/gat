@@ -1,6 +1,8 @@
 import os.path as osp
 import torch
 import torch.nn.functional as F
+import torch.optim.lr_scheduler as LR
+import numpy as np
 
 import torch_geometric.transforms as T
 from torch_geometric.datasets import Planetoid
@@ -25,17 +27,21 @@ class Net(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
-        self.conv1 = GATConv(in_channels, 8, heads=8, dropout=0.6)
+        self.conv1 = GATConv(in_channels, 4, heads=4, dropout=0)
         # On the Pubmed dataset, use heads=8 in conv2.
-        self.conv2 = GATConv(8 * 8, out_channels, heads=1, concat=False,
-                             dropout=0.6)
+        self.conv2 = GATConv(4 * 4, 8, heads = 8, dropout=0)
+        self.conv3 = GATConv(8 * 8, out_channels, heads=1, concat=False,
+                             dropout=0)
 
     def forward(self, x, edge_index):
-        x = F.dropout(x, p=0.6, training=self.training)
+        x = F.dropout(x, p=0, training=self.training)
         x = F.elu(self.conv1(x, edge_index))
-        x = F.dropout(x, p=0.6, training=self.training)
-        x = self.conv2(x, edge_index)
-        return F.log_softmax(x, dim=-1)
+        x = F.dropout(x, p=0, training=self.training)
+        x = F.elu(self.conv2(x, edge_index))
+        x = F.dropout(x, p=0, training=self.training)
+        x = self.conv3(x, edge_index)
+        return x
+        # return F.log_softmax(x, dim=-1)
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -44,21 +50,18 @@ model = Net(2, 4).to(device)
 data = data.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.05, weight_decay=5e-4)
 
-# ###
-# out = model(data.x, data.edge_index)
-# print(out)
-# print(data.train_mask)
-# print(data.y[data.train_mask].shape)
-# ###
+scheduler = LR.StepLR(optimizer, step_size=10, gamma=0.5)
+
 
 def train(data):
     model.train()
     optimizer.zero_grad()
     out = model(data.x, data.edge_index)
-    loss = F.mse_loss(out[data.train_mask].float(), data.y[data.train_mask].float())
+    loss = F.mse_loss(out[data.train_mask].float(), data.y[data.train_mask].float(), reduce=True, size_average=True)
     # print(loss)
     loss.backward()
     optimizer.step()
+    scheduler.step()
 
 
 @torch.no_grad()
@@ -66,11 +69,12 @@ def test(data):
     model.eval()
     out, accs = model(data.x, data.edge_index), []
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-        # print((out[mask] == data.y[mask]).sum())
-        # acc = float((out[mask].argmax(-1) == data.y[mask]).sum() / mask.sum())
-        acc = float((data.y[mask] - out[mask]).sum() / mask.sum())
+        # print(mask)
+        x = data.y[mask] - out[mask]
+        acc = torch.norm(x, p=2) ** 2 / x.shape[0] / x.shape[1]
         accs.append(acc)
-    # print(out)
+        # print(data.y[mask])
+        # print(out[mask])
     return accs
 
 

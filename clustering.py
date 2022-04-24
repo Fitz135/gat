@@ -117,35 +117,47 @@ class Clustering:
                     res = [v for v in cell_grid[i] if v in cell_grid[j]]
                     if res != []:
                         first_e.append(i)
-                        first_e.append(j)
+                        # first_e.append(j)
                         second_e.append(j)
-                        second_e.append(i)
+                        # second_e.append(i)
 
         edge_index = torch.tensor(edge_index,dtype=torch.long)
 
         y = self.labels_info
-        y = torch.tensor(y, dtype = torch.double)
+        y = torch.tensor(y, dtype=float)
 
-        train_mask, val_mask, test_mask = [], [], []
+        # train_mask, val_mask, test_mask = [], [], []
+        #
+        # for i in range(28):
+        #     r = random.randint(1,3)
+        #     if r == 1:
+        #         train_mask.append(True)
+        #         val_mask.append(False)
+        #         test_mask.append(False)
+        #     elif r == 2:
+        #         train_mask.append(False)
+        #         val_mask.append(True)
+        #         test_mask.append(False)
+        #     else:
+        #         train_mask.append(False)
+        #         val_mask.append(False)
+        #         test_mask.append(True)
+        #
+        # train_mask = torch.tensor(train_mask)
+        # test_mask = torch.tensor(test_mask)
+        # val_mask = torch.tensor(val_mask)
 
-        for i in range(28):
-            r = random.randint(1,3)
-            if r == 1:
-                train_mask.append(True)
-                val_mask.append(False)
-                test_mask.append(False)
-            elif r == 2:
-                train_mask.append(False)
-                val_mask.append(True)
-                test_mask.append(False)
-            else:
-                train_mask.append(False)
-                val_mask.append(False)
-                test_mask.append(True)
+        train_mask = torch.tensor([True, False, True,  True, False, False,  True, False, True, False,
+        False, False, False, False, False, False, False,  True, False, False,
+         True, False,  True, True, False, False, False, False])
 
-        train_mask = torch.tensor(train_mask)
-        test_mask = torch.tensor(test_mask)
-        val_mask = torch.tensor(val_mask)
+        val_mask = torch.tensor([False, False,  False, False,  True, False, False,  True,  False,  True,
+        False,  True, False,  True, False,  True,  True, False, False, False,
+        False,  True, False, False,  True,  True, False, False])
+
+        test_mask = torch.tensor([False,  True, False, False, False,  True, False, False, False, False,
+         True, False,  True, False,  True, False, False, False,  True,  True,
+        False, False, False,  False, False, False,  True,  True])
 
         return x, edge_index, y, train_mask, val_mask, test_mask
 
